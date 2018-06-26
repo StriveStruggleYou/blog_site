@@ -1,38 +1,68 @@
 ---
-title: Welcome Here 
+title: 高性能Mysql-读书笔记-索引篇
 ---
-Welcome to [Hexo](https://hexo.io/)! This is your very first post. Check [documentation](https://hexo.io/docs/) for more info. If you get any problems when using Hexo, you can find the answer in [troubleshooting](https://hexo.io/docs/troubleshooting.html) or you can ask me on [GitHub](https://github.com/hexojs/hexo/issues).
+#高性能Mysql-读书笔记-索引篇
 
-## Quick Start
+索引篇
 
-### Create a new post
+注：使用所有Mysql版本均为Mysql5.5以上，书上介绍的Mysql版本不超过5.0，所以书中部分内容已被Mysql本身优化，下面会具体说明。
 
-``` bash
-$ hexo new "My New Post"
-```
+1.Mysql只能高效利用多列索引的最左前缀列
 
-More info: [Writing](https://hexo.io/docs/writing.html)
+PS：根据测试和网上查询资料，只要使用Mysql最左前缀列即可。多列索引，where中索引字段顺序与使用索引无关，Mysql会自动优化调整顺序，使用全部索引字段查询。
 
-### Run server
+2.B-Tree索引适合全键值，键值范围，键值最左前缀查找
 
-``` bash
-$ hexo server
-```
+3.多列索引在不使用索引最左列的时候无法生效
 
-More info: [Server](https://hexo.io/docs/server.html)
+PS:应该是最容易被忽略的导致不走索引的情况
 
-### Generate static files
+4.多列索引在跳过某列时，只能使用最左列索引
 
-``` bash
-$ hexo generate
-```
+PS:在使用索引全部字段时，顺序与索引使用情况无关；但是在跳过中间部分索引列时，只能使用最左索引列，而且对查询性能影响很明显。
 
-More info: [Generating](https://hexo.io/docs/generating.html)
+5.多列索引在某列存在范围查询时，其右边所以列都无法使用索引查询
 
-### Deploy to remote sites
+6.索引将相关记录放到一起为一星，索引数据顺序和查询顺序一致为二星，索引包含查询需要的全部列为三星
 
-``` bash
-$ hexo deploy
-```
+7.索引列不能参与表达式计算或者作为函数参数
 
-More info: [Deployment](https://hexo.io/docs/deployment.html)
+PS: in, not in, != 在高版本Mysql中可以走索引，前提扫描数据列不超过全表20%
+
+8.前缀索引应该较长保证较高选择性，且不过长节省空间。一般前缀索引基数应该接近完整列基数
+
+9.mysql5.0后引入索引合并，可以使用多个单列索引查询
+
+10.但这不代表单列索引可以替代多列索引，服务器对多个单列索引进行操作的时候，需要消耗大量CPU和内存资源
+
+PS：而且这部分优化，是不会计算在解释执行计划的开销内的，从而影响Mysql的最终执行。在极端情况下，会出现走索引性能反而不如不走索引。
+
+11.InnoDB主键索引即为聚簇索引，应尽量避免随机索引，如UUID
+
+PS:mysql索引是顺序存储，自增ID的性能明显好于随机ID
+
+12.顺序主键在高并发下会造成明显的争用
+
+13.索引覆盖在数据量较大且命中率不高的情况下才有明显性能提升
+
+PS:查询数据列全部为索引字段时，Mysql可以扫描到索引字段就停止查询，不用再进行一次回表操作，减少IO来提升性能，称为索引覆盖
+
+14.当索引列顺序和order by顺序一致且所有列排序方向一致时才能使用索引排序
+
+15.索引(A,B)和索引(A)是冗余索引，而索引(B,A)和索引(A)则不是
+
+16.InnoDB没有使用索引压缩，而MyISAM使用了。例如select count(*)时，索引由(A)改为(A,B)，InnoDB不会有明显性能下降
+
+17.应尽量避免在选择性低的列上建立索引
+
+18.选择性低的列为前缀列且查询没用到时，可以增加 where column in (...) 来让查询匹配索引
+
+PS：比如索引最左前缀列为sex，但是要查询全部性别的数据，可以使用where sex in ('male', 'female') and age>17 这样来保证查询使用索引
+
+19.尽量把需要范围查询的列放在索引最后面，以便优化器能使用更多的索引列
+
+20.可以使用延迟关联先查询主键，再关联全部数据列，以优化索引
+
+
+##感激
+* [漫游鹰](https://www.jianshu.com/p/b4f958fb7fcf)
