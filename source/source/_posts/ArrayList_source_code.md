@@ -1,7 +1,9 @@
 title: ArrayList源码分析
 author: Chen Mr
-date: 2018-07-10 22:33:21
 tags:
+  - 源码分析
+categories: []
+date: 2018-07-10 22:33:00
 ---
 # 学习 ArrayList 源码
 ```java
