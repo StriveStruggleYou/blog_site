@@ -1,6 +1,5 @@
+---
 title: about
 date: 2018-06-26 16:22:28
 ---
-#作者列表简介
-
-漫游（大数据人工智能从业者）
+hello this our desc
